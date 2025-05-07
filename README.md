@@ -293,6 +293,13 @@ reservoir_pinn_simulator/
 
 ---
 
+## TO DO
+1. Make use of real reservoir dataset
+2. Design PDE for multiphase flow
+3. Write Code base in C++ and C# for high performance and efficiency
+
+---
+
 ## 📜 License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE)
