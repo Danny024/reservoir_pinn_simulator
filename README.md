@@ -9,7 +9,7 @@ What you can do with the simulator:
 * ⚙️ Input your own reservoir parameters.
 * 🧠 Train new PINN models or load existing ones.
 * 📊 Visualize pressure fields with static slices and dynamic animations.
-* 🗣️ Query pressure values using cutting-edge LLMs like DeepSeek or OpenAI.
+* 🗣️ Query pressure values using cutting-edge LLMs (Deepseek and OpenAI)
 * 📈 Track experiments and manage models with MLflow integration.
 * 📖 Explore a detailed Jupyter Notebook explaining the PINN implementation.
 
@@ -69,6 +69,7 @@ reservoir_pinn_simulator/
 * **🧠 Ollama:** For local DeepSeek R1 1.5B LLM.
 * **🖼️ Pillow:** For GIF animation rendering (included in `requirements.txt`).
 * **📊 MLflow:** For experiment tracking and model persistence.
+* **🐍Anaconda:** For managing python environment.
 
 ---
 
@@ -84,8 +85,7 @@ reservoir_pinn_simulator/
     ```bash
     export PYTHONPATH=$PYTHONPATH:/path/to/your/reservoir_pinn_simulator
     ```
-    Replace `/path/to/your/reservoir_pinn_simulator` with the actual absolute path to the cloned directory. For example, if you cloned it into `/home/daniel/`, the path would be `/home/daniel/reservoir_pinn_simulator`.
-
+    
 3.  **Create a Conda Environment:**
     ```bash
     conda create -n reservoir_simulator python=3.12
