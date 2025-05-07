@@ -12,3 +12,4 @@ ollama==0.1.6
 pillow==10.2.0
 jupyter==1.0.0
 ffmpeg-python==0.2.0
+mlflow==2.16.2

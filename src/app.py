@@ -109,26 +109,68 @@ if st.button("Train Model"):
         N_b = 2000
         N_i = 2000
         N_r_adaptive = 10000
+
+        # Collocation points
         x_r = torch.rand(N_r).to(device)
         y_r = torch.rand(N_r).to(device)
         z_r = torch.rand(N_r).to(device)
         t_r = torch.rand(N_r).to(device)
+
+        # Adaptive sampling near data points
         x_r_adaptive = torch.normal(mean=0.5, std=0.1, size=(N_r_adaptive,)).clamp(0, 1).to(device)
         y_r_adaptive = torch.normal(mean=0.5, std=0.1, size=(N_r_adaptive,)).clamp(0, 1).to(device)
         z_r_adaptive = torch.normal(mean=0.5, std=0.1, size=(N_r_adaptive,)).clamp(0, 1).to(device)
         t_r_adaptive = torch.rand(N_r_adaptive).to(device)
+
         x_r = torch.cat([x_r, x_r_adaptive])
         y_r = torch.cat([y_r, y_r_adaptive])
         z_r = torch.cat([z_r, z_r_adaptive])
         t_r = torch.cat([t_r, t_r_adaptive])
-        x_b = torch.cat([torch.zeros(N_b//6), torch.ones(N_b//6), torch.rand(N_b//3), torch.rand(N_b//3)]).to(device)
-        y_b = torch.cat([torch.rand(N_b//3), torch.rand(N_b//3), torch.zeros(N_b//6), torch.ones(N_b//6)]).to(device)
-        z_b = torch.cat([torch.rand(N_b//3), torch.rand(N_b//3), torch.rand(N_b//3), torch.rand(N_b//3)]).to(device)
+
+        # Boundary points (N_b = 2000, distributed across 6 faces)
+        N_b_per_face = N_b // 6  # ~333 points per face
+        remainder = N_b % 6      # Distribute remainder to ensure exact N_b
+        face_counts = [N_b_per_face + 1 if i < remainder else N_b_per_face for i in range(6)]
+
+        # x=0 and x=1 faces
+        x_b = torch.cat([
+            torch.zeros(face_counts[0]),  # x=0
+            torch.ones(face_counts[1]),   # x=1
+            torch.rand(face_counts[2]),   # y=0
+            torch.rand(face_counts[3]),   # y=1
+            torch.rand(face_counts[4]),   # z=0
+            torch.rand(face_counts[5])    # z=1
+        ]).to(device)
+
+        # y=0 and y=1 faces
+        y_b = torch.cat([
+            torch.rand(face_counts[0]),   # x=0
+            torch.rand(face_counts[1]),   # x=1
+            torch.zeros(face_counts[2]),  # y=0
+            torch.ones(face_counts[3]),   # y=1
+            torch.rand(face_counts[4]),   # z=0
+            torch.rand(face_counts[5])    # z=1
+        ]).to(device)
+
+        # z=0 and z=1 faces
+        z_b = torch.cat([
+            torch.rand(face_counts[0]),   # x=0
+            torch.rand(face_counts[1]),   # x=1
+            torch.rand(face_counts[2]),   # y=0
+            torch.rand(face_counts[3]),   # y=1
+            torch.zeros(face_counts[4]),  # z=0
+            torch.ones(face_counts[5])    # z=1
+        ]).to(device)
+
+        # Random time for all boundary points
         t_b = torch.rand(N_b).to(device)
+
+        # Initial condition points
         x_i = torch.rand(N_i).to(device)
         y_i = torch.rand(N_i).to(device)
         z_i = torch.rand(N_i).to(device)
         t_i = torch.zeros(N_i).to(device)
+
         with st.spinner("Training model..."):
             losses = train_model(
                 st.session_state.model, x_r, y_r, z_r, t_r, x_b, y_b, z_b, t_b, x_i, y_i, z_i, t_i, x_d, y_d, z_d, t_d, p_d, epochs,
@@ -192,7 +234,7 @@ if st.session_state.trained:
             response = requests.post("http://localhost:8000/query", json=payload)
             if response.status_code == 200:
                 result = response.json()
-                if 'x' in result and 'y' in result and 'z' in result and 't' in result:
+                if all(key in result for key in ['x', 'y', 'z', 't']):
                     x, y, z, t = float(result['x']), float(result['y']), float(result['z']), float(result['t'])
                     inputs = torch.tensor([[x, y, z, t]], dtype=torch.float32).to(device)
                     with torch.no_grad():
