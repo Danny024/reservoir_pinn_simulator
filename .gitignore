@@ -9,7 +9,10 @@ ENV/
 env.bak/ 
 venv.bak/
 .env
-*.pth *.csv *.png *.mp4 
+*.pth 
+*.csv 
+*.png 
+*.mp4 
 !assets/pinn_architecture.png 
 !data/reservoir_data.csv
 .vscode/ 
