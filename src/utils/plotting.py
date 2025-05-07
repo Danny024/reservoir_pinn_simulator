@@ -1,9 +1,10 @@
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
-import torch
-import io
 from matplotlib.animation import FuncAnimation
+import io
+from PIL import Image
+import torch
 
 def plot_losses(losses):
     fig, ax = plt.subplots(figsize=(10, 6))
@@ -16,26 +17,25 @@ def plot_losses(losses):
     ax.set_ylabel('Loss')
     ax.set_title('Training Losses')
     ax.legend()
-    ax.set_yscale('log')
+    ax.grid(True)
     buf = io.BytesIO()
     plt.savefig(buf, format='png')
+    plt.close(fig)
     buf.seek(0)
-    plt.close()
     return buf
 
 def plot_reservoir_data(data_df):
-    fig = plt.figure(figsize=(6, 6))
+    fig = plt.figure(figsize=(8, 6))
     ax = fig.add_subplot(111, projection='3d')
-    sc = ax.scatter(data_df['x'], data_df['y'], data_df['z'], c=data_df['p'], cmap='viridis', s=50)
+    scatter = ax.scatter(data_df['x'], data_df['y'], data_df['z'], c=data_df['p'], cmap='viridis')
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
-    ax.set_title('3D Reservoir Data')
-    plt.colorbar(sc, label='Pressure (Pa)')
+    fig.colorbar(scatter, ax=ax, label='Pressure (Pa)')
     buf = io.BytesIO()
     plt.savefig(buf, format='png')
+    plt.close(fig)
     buf.seek(0)
-    plt.close()
     return buf
 
 def plot_pressure_slice(model, t_val, data_df, device, z_slice=0.5, p_scale=1000.0, p_base=1000.0):
@@ -60,11 +60,11 @@ def plot_pressure_slice(model, t_val, data_df, device, z_slice=0.5, p_scale=1000
     plt.legend()
     buf = io.BytesIO()
     plt.savefig(buf, format='png')
+    plt.close(fig)
     buf.seek(0)
-    plt.close()
     return buf
 
-def animate_pressure(model, data_df, device, z_slice=0.5, p_scale=1000.0, p_base=1000.0, filename='pressure_animation.mp4'):
+def animate_pressure(model, data_df, device, z_slice=0.5, p_scale=1000.0, p_base=1000.0, save_format='gif'):
     x = np.linspace(0, 1, 50)
     y = np.linspace(0, 1, 50)
     X, Y = np.meshgrid(x, y)
@@ -92,6 +92,10 @@ def animate_pressure(model, data_df, device, z_slice=0.5, p_scale=1000.0, p_base
         return contour,
 
     anim = FuncAnimation(fig, update, frames=len(times), interval=100, blit=False)
-    anim.save(filename, writer='ffmpeg', fps=10)
+    filename = 'pressure_animation.gif' if save_format == 'gif' else 'pressure_animation.mp4'
+    if save_format == 'gif':
+        anim.save(filename, writer='pillow', fps=10)
+    else:
+        anim.save(filename, writer='ffmpeg', fps=10)
     plt.close(fig)
     return filename
