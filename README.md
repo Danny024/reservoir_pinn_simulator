@@ -76,8 +76,8 @@ reservoir_pinn_simulator/
 
 1.  **Clone the Repository:**
     ```bash
-    git clone [https://github.com/your-username/reservoir-pinn-simulator-3d.git](https://github.com/your-username/reservoir-pinn-simulator-3d.git)
-    cd reservoir-pinn-simulator-3d
+    git clone [https://github.com/Danny024/reservoir_pinn_simulator.git](https://github.com/Danny024/reservoir_pinn_simulator.git)
+    cd reservoir_pinn_simulator
     ```
 
 2.  **Set up PYTHONPATH (Important!):**
