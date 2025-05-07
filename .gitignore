@@ -1,0 +1,20 @@
+pycache/ 
+*.pyc 
+*.pyo 
+*.pyd 
+.Python 
+env/ 
+venv/
+ENV/ 
+env.bak/ 
+venv.bak/
+.env
+*.pth *.csv *.png *.mp4 
+!assets/pinn_architecture.png 
+!data/reservoir_data.csv
+.vscode/ 
+.idea/ 
+*.sublime-project 
+*.sublime-workspace
+.DS_Store
+*.log
