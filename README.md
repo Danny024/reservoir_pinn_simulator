@@ -76,7 +76,7 @@ reservoir_pinn_simulator/
 
 1.  **Clone the Repository:**
     ```bash
-    git clone [https://github.com/Danny024/reservoir_pinn_simulator.git](https://github.com/Danny024/reservoir_pinn_simulator.git)
+    git clone https://github.com/Danny024/reservoir_pinn_simulator.git
     cd reservoir_pinn_simulator
     ```
 
