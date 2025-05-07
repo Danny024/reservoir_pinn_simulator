@@ -12,6 +12,7 @@ from src.models.pinn import PINN
 from src.utils.training import compute_pde_residual
 from src.utils.plotting import plot_losses, plot_reservoir_data, plot_pressure_slice, animate_pressure
 from torch.optim.lr_scheduler import StepLR
+from torch.cuda.amp import autocast, GradScaler
 
 # Load environment variables
 load_dotenv()
@@ -139,6 +140,7 @@ except Exception as e:
 def train_model_with_updates(model, x_r, y_r, z_r, t_r, x_b, y_b, z_b, t_b, x_i, y_i, z_i, t_i, x_d, y_d, z_d, t_d, p_d, epochs, phi, k, mu, ct, q0, well_pos, p_scale, p_base):
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     scheduler = StepLR(optimizer, step_size=2000, gamma=0.5)
+    scaler = GradScaler()  # For mixed precision training
     losses = {'pde': [], 'bc': [], 'ic': [], 'data': [], 'total': []}
     
     with mlflow.start_run() as run:
@@ -162,50 +164,65 @@ def train_model_with_updates(model, x_r, y_r, z_r, t_r, x_b, y_b, z_b, t_b, x_i,
         for epoch in range(epochs):
             optimizer.zero_grad()
             
-            # PDE residual loss
-            residual = compute_pde_residual(model, x_r, y_r, z_r, t_r, phi, k, mu, ct, q0, well_pos, p_scale, p_base)
-            loss_pde = torch.mean(residual**2)
-            
-            # Boundary condition loss
-            inputs_b = torch.stack([x_b, y_b, z_b, t_b], dim=1).requires_grad_(True).to(x_r.device)
-            p_b = model(inputs_b, p_scale, p_base)
-            p_grad_b = torch.autograd.grad(p_b, inputs_b, grad_outputs=torch.ones_like(p_b), create_graph=True)[0]
-            p_x_b, p_y_b, p_z_b = p_grad_b[:, 0], p_grad_b[:, 1], p_grad_b[:, 2]
-            mask_x0 = (x_b == 0)
-            mask_x1 = (x_b == 1)
-            loss_bc_x = torch.mean(p_x_b[mask_x0]**2) + torch.mean(p_x_b[mask_x1]**2)
-            mask_y0 = (y_b == 0)
-            mask_y1 = (y_b == 1)
-            loss_bc_y = torch.mean(p_y_b[mask_y0]**2) + torch.mean(p_y_b[mask_y1]**2)
-            mask_z0 = (z_b == 0)
-            mask_z1 = (z_b == 1)
-            loss_bc_z = torch.mean(p_z_b[mask_z0]**2) + torch.mean(p_z_b[mask_z1]**2)
-            loss_bc = loss_bc_x + loss_bc_y + loss_bc_z
-            
-            # Initial condition loss
-            inputs_i = torch.stack([x_i, y_i, z_i, t_i], dim=1).to(x_r.device)
-            p_i = model(inputs_i, p_scale, p_base)
-            loss_ic = torch.mean(((p_i - p_base) / p_scale)**2)
-            
-            # Data loss
-            inputs_d = torch.stack([x_d, y_d, z_d, t_d], dim=1).to(x_r.device)
-            p_d_pred = model(inputs_d, p_scale, p_base)
-            loss_data = torch.mean(((p_d_pred - p_d) / p_scale)**2)
-            
-            # Total loss
-            loss = loss_pde + 100 * loss_bc + 10000 * loss_ic + 1000000 * loss_data
-            
-            # Backpropagation
-            loss.backward()
-            optimizer.step()
+            # Mixed precision training
+            with autocast():
+                # PDE residual loss
+                residual = compute_pde_residual(model, x_r, y_r, z_r, t_r, phi, k, mu, ct, q0, well_pos, p_scale, p_base)
+                loss_pde = torch.mean(residual**2)
+                
+                # Boundary condition loss
+                inputs_b = torch.stack([x_b, y_b, z_b, t_b], dim=1).requires_grad_(True).to(x_r.device)
+                p_b = model(inputs_b, p_scale, p_base)
+                p_grad_b = torch.autograd.grad(p_b, inputs_b, grad_outputs=torch.ones_like(p_b), create_graph=True)[0]
+                p_x_b, p_y_b, p_z_b = p_grad_b[:, 0], p_grad_b[:, 1], p_grad_b[:, 2]
+                mask_x0 = (x_b == 0)
+                mask_x1 = (x_b == 1)
+                loss_bc_x = torch.mean(p_x_b[mask_x0]**2) + torch.mean(p_x_b[mask_x1]**2)
+                mask_y0 = (y_b == 0)
+                mask_y1 = (y_b == 1)
+                loss_bc_y = torch.mean(p_y_b[mask_y0]**2) + torch.mean(p_y_b[mask_y1]**2)
+                mask_z0 = (z_b == 0)
+                mask_z1 = (z_b == 1)
+                loss_bc_z = torch.mean(p_z_b[mask_z0]**2) + torch.mean(p_z_b[mask_z1]**2)
+                loss_bc = loss_bc_x + loss_bc_y + loss_bc_z
+                
+                # Initial condition loss
+                inputs_i = torch.stack([x_i, y_i, z_i, t_i], dim=1).to(x_r.device)
+                p_i = model(inputs_i, p_scale, p_base)
+                loss_ic = torch.mean(((p_i - p_base) / p_scale)**2)
+                
+                # Data loss
+                inputs_d = torch.stack([x_d, y_d, z_d, t_d], dim=1).to(x_r.device)
+                p_d_pred = model(inputs_d, p_scale, p_base)
+                loss_data = torch.mean(((p_d_pred - p_d) / p_scale)**2)
+                
+                # Total loss with clamping to prevent NaN/inf
+                loss = loss_pde + 100 * loss_bc + 10000 * loss_ic + 1000000 * loss_data
+                loss = torch.clamp(loss, min=-1e10, max=1e10)  # Prevent numerical overflow
+
+            # Check for NaN or inf in losses
+            if torch.isnan(loss) or torch.isinf(loss):
+                print(f"Epoch {epoch + 1}: Loss is NaN or inf, skipping...")
+                continue
+
+            # Backpropagation with gradient scaling
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
             scheduler.step()
             
-            # Store losses
-            losses['pde'].append(loss_pde.item())
-            losses['bc'].append(loss_bc.item())
-            losses['ic'].append(loss_ic.item())
-            losses['data'].append(loss_data.item())
-            losses['total'].append(loss.item())
+            # Store losses with NaN checking
+            loss_pde_val = loss_pde.item() if torch.isfinite(loss_pde) else 0.0
+            loss_bc_val = loss_bc.item() if torch.isfinite(loss_bc) else 0.0
+            loss_ic_val = loss_ic.item() if torch.isfinite(loss_ic) else 0.0
+            loss_data_val = loss_data.item() if torch.isfinite(loss_data) else 0.0
+            loss_total_val = loss.item() if torch.isfinite(loss) else 0.0
+            
+            losses['pde'].append(loss_pde_val)
+            losses['bc'].append(loss_bc_val)
+            losses['ic'].append(loss_ic_val)
+            losses['data'].append(loss_data_val)
+            losses['total'].append(loss_total_val)
             
             # Update GUI and log to MLflow every 1000 epochs
             if (epoch + 1) % 1000 == 0 or epoch == 0:
@@ -214,17 +231,17 @@ def train_model_with_updates(model, x_r, y_r, z_r, t_r, x_b, y_b, z_b, t_b, x_i,
                 epoch_placeholder.write(f"Epoch: {epoch + 1}/{epochs}")
                 loss_placeholder.write(
                     f"**Losses**:\n"
-                    f"- Total: {loss.item():.6f}\n"
-                    f"- PDE: {loss_pde.item():.6f}\n"
-                    f"- BC: {loss_bc.item():.6f}\n"
-                    f"- IC: {loss_ic.item():.6f}\n"
-                    f"- Data: {loss_data.item():.6f}"
+                    f"- Total: {loss_total_val:.6f}\n"
+                    f"- PDE: {loss_pde_val:.6f}\n"
+                    f"- BC: {loss_bc_val:.6f}\n"
+                    f"- IC: {loss_ic_val:.6f}\n"
+                    f"- Data: {loss_data_val:.6f}"
                 )
-                mlflow.log_metric("total_loss", loss.item(), step=epoch + 1)
-                mlflow.log_metric("pde_loss", loss_pde.item(), step=epoch + 1)
-                mlflow.log_metric("bc_loss", loss_bc.item(), step=epoch + 1)
-                mlflow.log_metric("ic_loss", loss_ic.item(), step=epoch + 1)
-                mlflow.log_metric("data_loss", loss_data.item(), step=epoch + 1)
+                mlflow.log_metric("total_loss", loss_total_val, step=epoch + 1)
+                mlflow.log_metric("pde_loss", loss_pde_val, step=epoch + 1)
+                mlflow.log_metric("bc_loss", loss_bc_val, step=epoch + 1)
+                mlflow.log_metric("ic_loss", loss_ic_val, step=epoch + 1)
+                mlflow.log_metric("data_loss", loss_data_val, step=epoch + 1)
                 run_id_placeholder.write(f"MLflow Run ID: {run.info.run_id}")
             
             # Adaptive sampling
@@ -235,6 +252,11 @@ def train_model_with_updates(model, x_r, y_r, z_r, t_r, x_b, y_b, z_b, t_b, x_i,
                 y_r = torch.cat([y_r, y_r[top_indices]])
                 z_r = torch.cat([z_r, z_r[top_indices]])
                 t_r = torch.cat([t_r, t_r[top_indices]])
+        
+        # Debug: Print losses before plotting
+        print("Losses before plotting:", {key: len(losses[key]) for key in losses})
+        for key in losses:
+            print(f"{key} loss sample: {losses[key][:5]} ... {losses[key][-5:]}")
         
         # Save model and loss plot as artifacts
         model_path = "reservoir_pinn.pth"
@@ -389,7 +411,7 @@ if st.session_state.trained:
                     inputs = torch.tensor([[x, y, z, t]], dtype=torch.float32).to(device)
                     with torch.no_grad():
                         pressure = st.session_state.model(inputs, st.session_state.p_scale, st.session_state.p_base).item()
-                    st.write(f"Pressure at x = {x}, y = {y}, z={z}, t={t}: \n **{pressure:.2f} Pa**")
+                    st.write(f"Pressure at x={x}, y={y}, z={z}, t={t}: {pressure:.2f} Pa")
                 else:
                     st.write(result.get('response', 'Could not extract coordinates.'))
             else:
