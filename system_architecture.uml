@@ -1,0 +1,160 @@
+@startuml
+' Title and skin parameters for clarity
+title 3D Reservoir PINN Simulator System Architecture (Corrected)
+skinparam monochrome true
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+
+' Define packages for organization
+package "Streamlit App" {
+  [App]
+  [StreamlitUI]
+}
+
+package "Model" {
+  [PINN]
+}
+
+package "Utils" {
+  [TrainingUtils]
+  [PlottingUtils]
+  [DataHandler]
+}
+
+package "API" {
+  [FastAPIServer]
+  [LLM] ' LLM abstraction can live here or in its own package
+}
+
+package "Experiment Tracking" {
+  [MLflow]
+}
+
+package "External Dependencies" {
+  [PyTorch]
+  [Matplotlib]
+  [Pillow]
+  [Pandas] ' Added Pandas
+  [Ollama]
+  [OpenAI]
+}
+
+' Relationships between components
+' Streamlit App and its internal UI
+[App] --> [StreamlitUI] : Interacts with / Uses
+
+' App uses various components
+[App] --> [PINN] : Manages / Uses
+[App] --> [TrainingUtils] : Uses for training logic
+[App] --> [PlottingUtils] : Uses for visualization
+[App] --> [DataHandler] : Uses for data loading/preprocessing
+[App] --> [FastAPIServer] : Makes requests to (for LLM queries)
+[App] --> [MLflow] : Logs to
+
+' API Layer
+[FastAPIServer] --> [LLM] : Uses for queries
+
+' LLM Abstraction uses specific implementations/services
+[LLM] ..> [Ollama] : Can use (e.g., DeepSeek via Ollama)
+[LLM] ..> [OpenAI] : Can use (e.g., OpenAI API)
+' Using ..> (dependency) to show it relies on one of these external services.
+
+' Dependencies on external libraries
+[PINN] --> [PyTorch]
+[TrainingUtils] --> [PyTorch]
+[PlottingUtils] --> [Matplotlib]
+[PlottingUtils] --> [Pillow]
+[DataHandler] --> [Pandas]
+
+' Class definitions with key attributes and methods
+[App] {
+  - model: PINN
+  - device: torch.device
+  - losses: dict
+  - openai_api_key: str
+  + train_model_with_updates()
+  + visualize_pressure_slice()
+  + generate_pressure_animation()
+  + query_pressure_with_llm()
+}
+
+[StreamlitUI] {
+  + display_inputs()
+  + display_plots()
+  + display_animation()
+}
+
+[PINN] {
+  - layers: list
+  - p_scale: float
+  - p_base: float
+  + forward(inputs: torch.Tensor): torch.Tensor
+}
+
+[TrainingUtils] {
+  + compute_pde_residual(model, points, params): torch.Tensor
+}
+
+[PlottingUtils] {
+  + plot_losses(losses: dict): BytesIO
+  + plot_reservoir_data(data_df: DataFrame): BytesIO
+  + plot_pressure_slice(model, t_val, data_df, device, z_slice, p_scale, p_base): BytesIO
+  + animate_pressure(model, data_df, device, z_slice, p_scale, p_base, save_format): str
+}
+
+[DataHandler] {
+  + load_csv(file_path: str): DataFrame
+  + preprocess_data(data_df: DataFrame): DataFrame
+}
+
+[FastAPIServer] {
+  - api_key: str
+  + query(prompt: str, llm_model: str): dict
+}
+
+[LLM] {
+  - model_type: str
+  + predict(prompt: str): str
+}
+
+[MLflow] {
+  + log_param(key: str, value: any)
+  + log_metric(key: str, value: float, step: int)
+  + log_artifact(file_path: str)
+}
+
+
+' Additional notes
+note right of [App]
+  Main entry point for user interaction.
+  Handles training, visualization,
+  querying, and data loading.
+end note
+
+note right of [PINN]
+  Neural network for solving
+  3D PDE for pressure field.
+end note
+
+note right of [FastAPIServer]
+  Backend API for LLM-based pressure queries.
+  Uses an LLM abstraction which can leverage
+  DeepSeek via Ollama or OpenAI API.
+end note
+
+note right of [MLflow]
+  Tracks experiments, logs metrics (e.g., losses),
+  parameters (e.g., p_scale, p_base), and saves models.
+end note
+
+note right of [LLM]
+  Abstract representation of an LLM.
+  Concrete implementation chosen at runtime
+  (e.g., based on availability of OPENAI_API_KEY).
+end note
+
+note right of [DataHandler]
+  Loads and preprocesses CSV data
+  (e.g., data/reservoir_data.csv).
+end note
+@enduml

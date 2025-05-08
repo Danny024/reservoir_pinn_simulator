@@ -229,10 +229,6 @@ reservoir_pinn_simulator/
     * Select either "DeepSeek" or "OpenAI" as your LLM provider.
     * Enter your query in natural language (e.g., "What is the pressure at x=0.5, y=0.5, z=0.5, t=0.5?").
     * Click "Submit Query" to get the pressure prediction.
-
-8.  **🏗️ View Architecture:**
-    * The PINN architecture diagram is displayed under the "PINN Architecture" section.
-
 ---
 
 ## 🔗 MLflow Integration
