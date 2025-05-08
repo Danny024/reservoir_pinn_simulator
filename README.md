@@ -14,15 +14,13 @@ What you can do with the simulator:
 * 📖 Explore a detailed Jupyter Notebook explaining the PINN implementation.
 
 ---
-### Demo Video Link
+<!-- ### Demo Video Link
 
 * **Click On video to watch**
 
 
-[![youtube demo](https://img.youtube.com/vi/8esPZVqbEf4/0.jpg)](https://www.youtube.com/watch?v=8esPZVqbEf4)
+[![youtube demo](https://img.youtube.com/vi/8esPZVqbEf4/0.jpg)](https://www.youtube.com/watch?v=8esPZVqbEf4) -->
 
-
----
 ## ✨ Features
 
 * **📝 Input Parameters:** Configure reservoir settings like porosity, permeability, viscosity, compressibility, injection rate, well position, base pressure, and pressure scale.
