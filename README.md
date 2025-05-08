@@ -15,7 +15,10 @@ What you can do with the simulator:
 
 ---
 ### Demo Video Link
-* **Click On video**
+
+* **Click On video to watch**
+
+
 [![youtube demo](https://img.youtube.com/vi/8esPZVqbEf4/0.jpg)](https://www.youtube.com/watch?v=8esPZVqbEf4)
 
 
