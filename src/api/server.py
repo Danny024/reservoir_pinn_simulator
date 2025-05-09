@@ -62,7 +62,7 @@ def query_openai(prompt, api_key):
         "Content-Type": "application/json"
     }
     payload = {
-        "model": "gpt-4",
+        "model": "gpt-4o-mini",
         "messages": [
             {
                 "role": "system",
