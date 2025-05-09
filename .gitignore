@@ -15,6 +15,7 @@ venv.bak/
 *.mp4 
 !assets/pinn_architecture.png 
 !pinn_architecture.png 
+!pressure_animation.gif
 !data/reservoir_data.csv
 .vscode/ 
 .idea/ 
