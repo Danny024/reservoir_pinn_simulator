@@ -14,7 +14,11 @@ What you can do with the simulator:
 * 📖 Explore a detailed Jupyter Notebook explaining the PINN implementation.
 
 ---
-### Demo Video Link
+### Demo Video
+
+
+[Youtube Demo Link](https://www.youtube.com/watch?v=TdiYoeC3J3g)
+
 
 ![reservoir_demo](assets/reservoir_demo.gif)
 ----
