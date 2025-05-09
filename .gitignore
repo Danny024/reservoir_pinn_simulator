@@ -14,6 +14,7 @@ venv.bak/
 *.png 
 *.mp4 
 !assets/pinn_architecture.png 
+!pinn_architecture.png 
 !data/reservoir_data.csv
 .vscode/ 
 .idea/ 
