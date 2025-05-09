@@ -421,10 +421,4 @@ if st.session_state.trained:
 else:
     st.info("Train or load a model first to query pressures.")
 
-# # Display PINN architecture
-# st.header("PINN Architecture")
-# try:
-#     img = Image.open('assets/pinn_architecture.png')
-#     st.image(img, caption="PINN Architecture")
-# except FileNotFoundError:
-#     st.warning("PINN architecture image not found. Run the notebook to generate it.")
+
